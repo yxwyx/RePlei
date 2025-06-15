@@ -34,12 +34,14 @@ NULL
 #' }
 #' @export
 RePlei <- function(betajk, sjk, C_g, C_e, h2,
-                   p = 0.1, lambda = 0.10, alpha = 2, tau2 = 5e-4,
+                   p = 0.10, lambda = 0.10, alpha = 2, tau2 = 5e-4,
                    min_iter = 100, max_iter = 1000,
                    rel.eps = 1e-6, verbose = TRUE,
                    nthreads = parallel::detectCores()) {
   
-  stopifnot(length(dim(betajk)) == 3, all(dim(betajk) == dim(sjk)))
+  ## --- basic sanity -------------------------------------------------------
+  stopifnot(length(dim(betajk)) == 3, all(dim(betajk) == dim(sjk)), ncol(C_g) == length(h2))
+  
   Sys.setenv(OMP_NUM_THREADS = nthreads)
   
   Omega  <- diag(sqrt(h2)) %*% C_g %*% diag(sqrt(h2))
@@ -49,57 +51,50 @@ RePlei <- function(betajk, sjk, C_g, C_e, h2,
   ll_hist <- numeric(max_iter)
   
   for (it in seq_len(max_iter)) {
-    #E step
-    E_res <- E_step(
+    ## --- E-step -----------------------------------------------------------
+    E <- E_step(
       aperm(betajk, c(3, 2, 1)),
       aperm(sjk,    c(3, 2, 1)),
       C_e, Omega, OmInv, lambda, alpha, tau2, p)
     
-    R_hat    <- E_res$Rhat
-    ll_total <- sum(E_res$ll)
-    alph_num <- sum(E_res$alph_num)
-    alph_den <- sum(E_res$alph_den)
-    tau_num  <- sum(E_res$tau_num)
+    R_hat    <- E$Rhat
+    ll_total <- sum(E$ll)
+    alph_num <- sum(E$alph_num)
+    alph_den <- sum(E$alph_den)
+    tau_num  <- sum(E$tau_num)
     
-    #M step
+    ## --- M-step -----------------------------------------------------------
     p_new      <- mean(R_hat)
     lambda_new <- alph_den / (K * sum(1 - R_hat))
     alpha_new  <- alph_num / (Q * alph_den)
     tau2_new   <- max(tau_num / (Q * sum(R_hat)), 1e-6)
     
-    # eps
     eps <- 1e-9
     p_new      <- max(min(p_new,      1 - eps), eps)
     lambda_new <- max(min(lambda_new, 1 - eps), eps)
     alpha_new  <- max(alpha_new, eps)
     tau2_new   <- max(tau2_new,  eps)
     
-    #Convergence
     ll_hist[it] <- ll_total
     if (verbose) {
-      msg <- sprintf(
+      message(sprintf(
         "iter %03d  ll=%.3f  p=%.4g  lambda=%.4g  alpha=%.3f  tau2=%.2e",
-        it, ll_total, p_new, lambda_new, alpha_new, tau2_new)
-      message(msg)
+        it, ll_total, p_new, lambda_new, alpha_new, tau2_new))
     }
     
-    # Check log likelihood criteria after the first iteration
     if (it > 1) {
       ll_rel  <- abs((ll_hist[it] - ll_hist[it - 1]) / ll_hist[it])
       ll_diff <- abs(ll_hist[it] - ll_hist[it - 1])
-      
-      converged <- (
-        (ll_rel  < rel.eps && ll_diff < 0.01) ||
-          (ll_diff < 0.001    && it > min_iter)   ||
-          (ll_rel  < rel.eps  && it > min_iter))
-      
+      converged <- (ll_rel < rel.eps && ll_diff < 0.01) ||
+        (ll_diff < 0.001 && it > min_iter)   ||
+        (ll_rel < rel.eps && it > min_iter)
       if (converged) {
         ll_hist <- ll_hist[seq_len(it)]
         break
       }
     }
     
-    # Update parameters for next iteration ---------------------------------
+    ## update parameters
     p      <- p_new
     lambda <- lambda_new
     alpha  <- alpha_new
@@ -107,11 +102,12 @@ RePlei <- function(betajk, sjk, C_g, C_e, h2,
   }
   
   list(p = p, lambda = lambda, alpha = alpha, tau2 = tau2,
-       R_hat = as.vector(E_res$Rhat), O_hat = E_res$Ohat, mu_hat = E_res$mu_hat,
-       post_means = E_res$mu_hat * as.vector(E_res$Rhat),
-       FDR = Get_FDR(E_res$Rhat),
+       R_hat = as.vector(E$Rhat),
+       O_hat = E$Ohat,
+       mu_hat = E$mu_hat,
+       post_means = E$mu_hat * as.vector(E$Rhat),
+       FDR = Get_FDR(E$Rhat),
        logLik = ll_hist)
-  
 }
 
 #' Calculate FDR

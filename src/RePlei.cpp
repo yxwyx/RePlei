@@ -20,14 +20,14 @@ inline double lse(double a, double b) noexcept {
     : b + std::log1p(std::exp(a - b));
 }
 
-inline bool safe_chol(mat &L, const mat &A) {
+inline bool safe_chol(arma::mat &L, const arma::mat &A) {
   if (arma::chol(L, A, "lower")) return true;
   mat Ap = A + 1e-10 * arma::eye(A.n_rows, A.n_cols);
   return arma::chol(L, Ap, "lower");
 }
 
 /* extract full row k of a matrix into a *plain* rowvec */
-inline rowvec copy_row(const mat &M, uword k)
+inline arma::rowvec copy_row(const arma::mat &M, arma::uword k)
 {
   rowvec out(M.n_cols);
   for (uword j = 0; j < M.n_cols; ++j) out[j] = M(k, j);
@@ -35,7 +35,7 @@ inline rowvec copy_row(const mat &M, uword k)
 }
 
 /* pull selected elements into a new rowvec */
-inline rowvec subset(const rowvec &r, const uvec &idx)
+inline arma::rowvec subset(const arma::rowvec &r, const arma::uvec &idx)
 {
   rowvec out(idx.n_elem);
   for (uword i = 0; i < idx.n_elem; ++i) out[i] = r[idx[i]];
@@ -43,17 +43,19 @@ inline rowvec subset(const rowvec &r, const uvec &idx)
 }
 
 /* indices of finite elements in a rowvec */
-inline uvec finite_idx(const rowvec &r)
+inline arma::uvec finite_idx(const arma::rowvec &r)
 {
   std::vector<uword> tmp;
-  for (uword i = 0; i < r.n_elem; ++i)
+  for (uword i = 0; i < r.n_elem; ++i){
     if (arma::is_finite(r[i])) tmp.push_back(i);
+  }
+
     return uvec(tmp);
 }
 
 /* Σ_s = D Ce_sub D, return Σ and its chol L */
-inline void make_sigma(const rowvec &s_row, const uvec &idx,
-                       const mat &Ce, mat &Sig, mat &L)
+inline void make_sigma(const arma::rowvec &s_row, const arma::uvec &idx,
+                       const arma::mat &Ce, arma::mat &Sig, arma::mat &L)
 {
   mat D(idx.n_elem, idx.n_elem, arma::fill::zeros);
   for (uword i = 0; i < idx.n_elem; ++i) D(i, i) = s_row[idx[i]];
@@ -62,8 +64,8 @@ inline void make_sigma(const rowvec &s_row, const uvec &idx,
 }
 
 /* log-dens of one MVN obs given chol(L), logdet */
-inline double dmvnrm1(const rowvec &x,
-                      const mat    &L,
+inline double dmvnrm1(const arma::rowvec &x,
+                      const arma::mat    &L,
                       double        logdet)
 {
   const double k2Pi = std::log(2.0 * M_PI);
@@ -75,7 +77,7 @@ inline double dmvnrm1(const rowvec &x,
 /*                log-likelihood pieces (missing aware)                */
 /* ------------------------------------------------------------------ */
 
-double ll_R0_j(const mat &b, const mat &s, const mat &Ce,
+double ll_R0_j(const arma::mat &b, const arma::mat &s, const arma::mat &Ce,
                double lambda, double alpha)
 {
   double loglik = 0.0;
@@ -101,8 +103,8 @@ double ll_R0_j(const mat &b, const mat &s, const mat &Ce,
   return loglik;
 }
 
-double ll_R1_j(const mat &b, const mat &s, const mat &Ce,
-               const mat &Omega, double tau2)
+double ll_R1_j(const arma::mat &b, const arma::mat &s, const arma::mat &Ce,
+               const arma::mat &Omega, double tau2)
 {
   std::vector<uvec>   idcs;
   std::vector<mat>    Sigks;
@@ -133,7 +135,8 @@ double ll_R1_j(const mat &b, const mat &s, const mat &Ce,
                   st + idcs[bidx].n_elem - 1) = Sigks[bidx];
   }
   /* τ² Ω prior blocks */
-  for (std::size_t i = 0; i < idcs.size(); ++i)
+  for (std::size_t i = 0; i < idcs.size(); ++i) {
+    
     for (std::size_t j = 0; j < idcs.size(); ++j) {
       uword r1 = starts[i], r2 = starts[j];
       SigTot.submat(r1, r2,
@@ -141,6 +144,9 @@ double ll_R1_j(const mat &b, const mat &s, const mat &Ce,
                     r2 + idcs[j].n_elem - 1)
         += tau2 * Omega.submat(idcs[i], idcs[j]);
     }
+    
+  }
+    
     
     mat L;  safe_chol(L, SigTot);
     double ld = 2.0 * arma::sum(log(L.diag()));
@@ -156,7 +162,7 @@ double ll_R1_j(const mat &b, const mat &s, const mat &Ce,
     return dmvnrm1(bvec, L, ld);
 }
 
-vec deltis(const mat &b, const mat &s, const mat &Ce,
+vec deltis(const arma::mat &b, const arma::mat &s, const arma::mat &Ce,
            double lambda, double alpha)
 {
   vec out(b.n_rows, arma::fill::zeros);
@@ -193,8 +199,8 @@ struct SNPResult {
   rowvec mu_hat;
 };
 
-SNPResult E_step_one(const mat &b, const mat &s,
-                     const mat &Ce, const mat &Om, const mat &OmInv,
+SNPResult E_step_one(const arma::mat &b, const arma::mat &s,
+                     const arma::mat &Ce, const arma::mat &Om, const arma::mat &OmInv,
                      double lambda, double alpha, double tau2, double p)
 {
   const uword Q = b.n_cols, K = b.n_rows;
@@ -250,8 +256,8 @@ SNPResult E_step_one(const mat &b, const mat &s,
 /* ------------------------------------------------------------------ */
 
 // [[Rcpp::export]]
-List E_step(const cube &B, const cube &S,
-            const mat  &Ce, const mat  &Om, const mat  &OmInv,
+List E_step(const arma::cube &B, const arma::cube &S,
+            const arma::mat  &Ce, const arma::mat  &Om, const arma::mat  &OmInv,
             double lambda, double alpha, double tau2, double p)
 {
   const uword M = B.n_slices, K = B.n_cols, Q = B.n_rows;

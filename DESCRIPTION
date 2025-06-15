@@ -1,7 +1,7 @@
 Package: RePlei
 Type: Package
 Title: Replication of pleiotropic loci with GWAS summary statistics
-Version: 0.1.0
+Version: 0.1.1
 Date: 2025-04-28
 Authors@R: person("Yuxuan", "Wang", role = c("aut", "cre"), email = "yxw@bu.edu")
 Description: Fast EM implementation (C++/OpenMP) for estimating the RePlei hierarchical model of multi-trait replicability using GWAS summary data.
