@@ -14,10 +14,6 @@
 #' By setting `lambda = 0`, this function can also simulate data under a simpler
 #' fixed-effect pleiotropy model without outliers.
 #'
-#' @note
-#' For this function to work seamlessly within your package, the `res2ref_cpd` data object
-#' should be included in the package's `data/` directory. You can do this by running
-#' `usethis::use_data(res2ref_cpd, overwrite = TRUE)` from your package's root directory.
 #'
 #' @param M An integer. The number of SNPs to simulate. Default: `5000`.
 #' @param p A numeric value. The proportion of SNPs with true non-zero pleiotropic effects. Default: `0.01`.
@@ -29,14 +25,15 @@
 #' @param n A numeric vector of length `K`. The sample sizes for each of the `K` studies. Default: `rep(50000, 10)`.
 #' @param lambda A numeric value. The proportion of null SNPs that are outliers in a given study. Default: `0.025`.
 #' @param alpha A numeric value. The inflation factor for the variance of outlier SNPs. Default: `5`.
-#' @param resref A numeric vector. A reference pool of residual standard deviations to sample from. If `NULL` (default), the function attempts to use the `res2ref_cpd` data object.
+#' @param resref A numeric vector. A reference pool of residual standard deviations to sample from.
+#'   By default, this is calculated from the `res2ref_cpd` dataset included with the RePlei package.
 #'
 #' @return A list containing the full simulated data, including `betajk`, `sjk`, `Rj`, and `Ojk`.
 #'
 #' @export
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom stats rbinom rnorm
-#'
+#' @importFrom utils data
 #' @examples
 #' # --- Setup parameters for a 3-trait simulation ---
 #' Q_val <- 3
@@ -63,13 +60,9 @@ simulate_replei_data <- function(M = 5000, p = 0.01, tau2 = 5e-04, C_g, C_e, h2,
     stop("Error: Length of h2 must match Q.")
   }
   
+  # 
   if (is.null(resref)) {
-    if (exists("res2ref_cpd")) {
-      resref <- sqrt(res2ref_cpd$res2)
-    } else {
-      warning("Using a default 'resref'. Provide 'resref' or add 'res2ref_cpd' to package data.")
-      resref <- stats::rnorm(1000, mean = 1, sd = 0.1)
-    }
+    resref <- sqrt(res2ref_cpd$res2)
   }
   
   K <- length(n)
