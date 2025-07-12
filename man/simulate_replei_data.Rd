@@ -59,19 +59,3 @@ null SNPs (\code{lambda}) are simulated as outliers with inflated variance (\cod
 By setting \code{lambda = 0}, this function can also simulate data under a simpler
 fixed-effect pleiotropy model without outliers.
 }
-\examples{
-# --- Setup parameters for a 3-trait simulation ---
-Q_val <- 3
-Cg_mat <- matrix(c(1, 0.4, 0.2, 0.4, 1, 0.3, 0.2, 0.3, 1), nrow = Q_val)
-Ce_mat <- matrix(c(1, 0.1, 0.05, 0.1, 1, 0.15, 0.05, 0.15, 1), nrow = Q_val)
-h2_vec <- c(0.3, 0.4, 0.25)
-sample_sizes <- rep(60000, 5) # 5 studies
-
-# --- Simulate data with outlier effects ---
-set.seed(123)
-sim_data_replei <- simulate_replei_data(
-  M = 1000, p = 0.02, C_g = Cg_mat, C_e = Ce_mat, h2 = h2_vec,
-  Q = Q_val, n = sample_sizes, lambda = 0.03, alpha = 5
-)
-
-}

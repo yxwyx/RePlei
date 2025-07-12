@@ -2,6 +2,11 @@
 
 export(Get_FDR)
 export(RePlei)
+export(simulate_replei_data)
 import(RcppArmadillo)
 importFrom(Rcpp,sourceCpp)
+importFrom(mvtnorm,rmvnorm)
+importFrom(stats,rbinom)
+importFrom(stats,rnorm)
+importFrom(utils,data)
 useDynLib(RePlei, .registration = TRUE)
