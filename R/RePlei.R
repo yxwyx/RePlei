@@ -50,6 +50,8 @@ RePlei <- function(betajk, sjk, C_g, C_e, h2,
   M <- dim(betajk)[1]; K <- dim(betajk)[2]; Q <- dim(betajk)[3]
   ll_hist <- numeric(max_iter)
   
+  start_time <- Sys.time()
+  
   for (it in seq_len(max_iter)) {
     ## --- E-step -----------------------------------------------------------
     E <- E_step(
@@ -101,12 +103,17 @@ RePlei <- function(betajk, sjk, C_g, C_e, h2,
     tau2   <- tau2_new
   }
   
+  
+  end_time <- Sys.time()
+  time <- end_time - start_time
+  
   list(p = p, lambda = lambda, alpha = alpha, tau2 = tau2,
        R_hat = as.vector(E$Rhat),
        O_hat = E$Ohat,
        mu_hat = E$mu_hat,
        post_means = E$mu_hat * as.vector(E$Rhat),
        FDR = Get_FDR(E$Rhat),
+       time = time,
        logLik = ll_hist)
 }
 
